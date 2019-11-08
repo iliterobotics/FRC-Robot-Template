@@ -1,4 +1,4 @@
-package us.ilite.commands;
+package us.ilite.robot.commands;
 
 public interface ICommand {
     void init(double pNow);
