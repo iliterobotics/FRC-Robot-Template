@@ -1,5 +1,237 @@
 package us.ilite.robot.modules;
 
-public class Drive extends Module {
+import com.flybotix.hfr.codex.Codex;
+import com.flybotix.hfr.util.log.ILog;
+import com.flybotix.hfr.util.log.Logger;
+import com.team254.frc2018.planners.DriveMotionPlanner;
+import com.team254.lib.geometry.Pose2dWithCurvature;
+import com.team254.lib.geometry.Rotation2d;
+import com.team254.lib.trajectory.Trajectory;
+import com.team254.lib.trajectory.timing.TimedState;
+import us.ilite.common.Data;
+import us.ilite.common.config.AbstractSystemSettingsUtils;
+import us.ilite.common.config.Settings;
+import us.ilite.common.lib.control.DriveController;
+import us.ilite.common.lib.control.PIDController;
+import us.ilite.common.types.ETargetingData;
+import us.ilite.common.types.drive.EDriveData;
+import us.ilite.common.types.sensor.EGyro;
+import us.ilite.common.types.sensor.EPowerDistPanel;
+import us.ilite.robot.hardware.Clock;
+import us.ilite.robot.hardware.ECommonControlMode;
+import us.ilite.robot.hardware.IDriveHardware;
+import us.ilite.robot.hardware.NeoDriveHardware;
+import us.ilite.robot.hardware.SimDriveHardware;
+import us.ilite.robot.loops.Loop;
+
+/**
+ * Class for running all drive train control operations from both autonomous and
+ * driver-control.
+ * TODO Support for rotation trajectories
+ * TODO Turn-to-heading with Motion Magic
+ */
+public class Drive extends Loop {
+	private final ILog mLogger = Logger.createLog(Drive.class);
+
+	private Data mData;
+
+	private IDriveHardware mDriveHardware;
+	private Rotation2d mGyroOffset = new Rotation2d();
+
+	private EDriveState mDriveState;
+	private DriveMessage mDriveMessage;
+	private double mTargetTrackingThrottle = 0;
+
+	private PIDController mTargetAngleLockPid;
+	private DriveController mDriveController;
+
+	private Clock mSimClock = null;
+	private double mPreviousTime = 0;
+
+	public Drive(Data data, DriveController pDriveController, Clock pSimClock, boolean pSimulated)
+	{
+		this.mData = data;
+		this.mDriveController = pDriveController;
+		if(pSimulated) {
+			this.mSimClock = pSimClock;
+			this.mDriveHardware = new SimDriveHardware(mSimClock, mDriveController.getRobotProfile());
+		} else {
+			if(AbstractSystemSettingsUtils.isPracticeBot()) {
+			} else {
+				this.mDriveHardware = new NeoDriveHardware(Settings.Drive.kGearboxRatio);
+			}
+		}
+
+		this.mDriveHardware.init();
+	}
+
+	public Drive(Data data, DriveController pDriveController) {
+		this(data, pDriveController, null, false);
+	}
+
+	@Override
+	public void modeInit(double pNow) {
+		mTargetAngleLockPid = new PIDController(Settings.kTargetAngleLockGains, Settings.kTargetAngleLockMinInput, Settings.kTargetAngleLockMaxInput, Settings.kControlLoopPeriod);
+		mTargetAngleLockPid.setOutputRange(Settings.kTargetAngleLockMinPower, Settings.kTargetAngleLockMaxPower);
+		mTargetAngleLockPid.setSetpoint(0);
+		mTargetAngleLockPid.reset();
+
+		mDriveController.setPlannerMode(DriveMotionPlanner.PlannerMode.FEEDBACK);
+        // Other gains to try: (2.0, 0.7), (0.65, 0.175), (0.0, 0.0)
+		mDriveController.getController().setGains(2.0, 0.7);
+
+		mDriveHardware.zero();
+
+	  	setDriveMessage(DriveMessage.kNeutral);
+	  	setDriveState(EDriveState.NORMAL);
+
+//	  	startCsvLogging();
+	}
+
+	@Override
+	public void periodicInput(double pNow) {
+
+		mData.drive.set(EDriveData.LEFT_POS_INCHES, mDriveHardware.getLeftInches());
+		mData.drive.set(EDriveData.RIGHT_POS_INCHES, mDriveHardware.getRightInches());
+//		mData.drive.set(EDriveData.LEFT_VEL_IPS, mDriveHardware.getLeftVelInches());
+//		mData.drive.set(EDriveData.RIGHT_VEL_IPS, mDriveHardware.getRightVelInches());
+		mData.drive.set(EDriveData.LEFT_VEL_TICKS, (double)mDriveHardware.getLeftVelTicks());
+		mData.drive.set(EDriveData.RIGHT_VEL_TICKS, (double)mDriveHardware.getRightVelTicks());
+
+		mData.drive.set(EDriveData.LEFT_MESSAGE_OUTPUT, mDriveMessage.leftOutput);
+		mData.drive.set(EDriveData.RIGHT_MESSAGE_OUTPUT, mDriveMessage.rightOutput);
+		mData.drive.set(EDriveData.LEFT_MESSAGE_CONTROL_MODE, (double)mDriveMessage.leftControlMode.ordinal());
+		mData.drive.set(EDriveData.RIGHT_MESSAGE_CONTROL_MODE, (double)mDriveMessage.rightControlMode.ordinal());
+		mData.drive.set(EDriveData.LEFT_MESSAGE_NEUTRAL_MODE, (double)mDriveMessage.leftNeutralMode.ordinal());
+		mData.drive.set(EDriveData.RIGHT_MESSAGE_NEUTRAL_MODE, (double)mDriveMessage.rightNeutralMode.ordinal());
+		mData.drive.set(EDriveData.LEFT_MESSAGE_DEMAND, mDriveMessage.leftDemand);
+		mData.drive.set(EDriveData.RIGHT_MESSAGE_DEMAND, mDriveMessage.rightDemand);
+//
+		mData.imu.set(EGyro.YAW_DEGREES, getHeading().getDegrees());
+
+//		SimpleNetworkTable.writeCodexToSmartDashboard(EDriveData.class, mData.drive, mClock.getCurrentTime());
+	}
+
+	@Override
+	public void update(double pNow) {
+        if(mDriveState != EDriveState.NORMAL) {
+			mLogger.error("Invalid drive state - maybe you meant to run this a high frequency?");
+			mDriveState = EDriveState.NORMAL;
+		} else {
+			mDriveHardware.set(mDriveMessage);
+		}
+
+		mPreviousTime = pNow;
+	}
+	
+	@Override
+	public void shutdown(double pNow) {
+		mDriveHardware.zero();
+	}
+
+	@Override
+	public void loop(double pNow) {
+//		mUpdateTimer.start();
+		switch(mDriveState) {
+			case PATH_FOLLOWING:
+			case TARGET_ANGLE_LOCK:
+
+				Codex<Double, ETargetingData> targetData = mData.limelight;
+				double pidOutput;
+				if(mTargetAngleLockPid != null && targetData != null && targetData.isSet(ETargetingData.tv) && targetData.get(ETargetingData.tx) != null) {
+
+					//if there is a target in the limelight's fov, lock onto target using feedback loop
+					pidOutput = mTargetAngleLockPid.calculate(-1.0 * targetData.get(ETargetingData.tx), pNow - mPreviousTime);
+					pidOutput = pidOutput + (Math.signum(pidOutput) * Settings.kTargetAngleLockFrictionFeedforward);
+
+					mDriveMessage = DriveMessage.getClampedTurnDrive(mTargetTrackingThrottle, pidOutput);
+					// If we've already seen the target and lose tracking, exit.
+				}
+
+				break;
+			case NORMAL:
+				break;
+			default:
+				mLogger.warn("Got drive state: " + mDriveState+" which is unhandled");
+				break;
+		}
+		mDriveHardware.set(mDriveMessage);
+		mPreviousTime = pNow;
+//		mUpdateTimer.stop();
+	}
+
+	public synchronized void setTargetAngleLock() {
+		mDriveState = EDriveState.TARGET_ANGLE_LOCK;
+		mDriveHardware.configureMode(ECommonControlMode.PERCENT_OUTPUT);
+		mDriveHardware.set(DriveMessage.kNeutral);
+	}
+
+	public synchronized void setPathFollowing() {
+		mDriveState = EDriveState.PATH_FOLLOWING;
+		mDriveHardware.configureMode(ECommonControlMode.VELOCITY);
+		mDriveHardware.set(new DriveMessage(0.0, 0.0, ECommonControlMode.VELOCITY));
+	}
+
+	public synchronized void setNormal() {
+		mDriveState = EDriveState.NORMAL;
+	}
+
+	public synchronized void setPath(Trajectory<TimedState<Pose2dWithCurvature>> pPath, boolean pResetPoseToStart) {
+		mDriveController.setTrajectory(pPath, pResetPoseToStart);
+		if(pResetPoseToStart) {
+			mDriveHardware.zero();
+		}
+	}
+
+	public synchronized void setTargetTrackingThrottle(double pTargetTrackingThrottle) {
+		mTargetTrackingThrottle = pTargetTrackingThrottle;
+	}
+
+
+	@Override
+	public boolean checkModule(double pNow) {
+        return mDriveHardware.checkHardware();
+	}
+
+
+	public synchronized void zero() {
+		mDriveHardware.zero();
+	}
+
+	private void setDriveState(EDriveState pDriveState) {
+		this.mDriveState = pDriveState;
+	}
+
+	public synchronized void setDriveMessage(DriveMessage pDriveMessage) {
+		this.mDriveMessage = pDriveMessage;
+	}
+
+	public synchronized DriveController getDriveController() {
+		return mDriveController;
+	}
+
+	public synchronized IDriveHardware getDriveHardware() {
+	    return mDriveHardware;
+    }
+
+    public synchronized DriveMessage getDriveMessage() {
+		return mDriveMessage;
+	}
+
+	public synchronized Rotation2d getHeading() {
+		return mDriveHardware.getHeading().rotateBy(mGyroOffset);
+	}
+
+	public synchronized void setHeading(Rotation2d pHeading) {
+		mGyroOffset = pHeading.rotateBy(mDriveHardware.getHeading().inverse());
+	}
+
+	public boolean isCurrentLimiting() {
+		return EPowerDistPanel.isAboveCurrentThreshold(Settings.Drive.kCurrentLimitAmps, mData.pdp, Settings.Drive.kPdpSlots);
+	}
+
+	public Clock getSimClock() {
+		return mSimClock;
+	}
 
 }

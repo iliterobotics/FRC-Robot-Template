@@ -5,8 +5,8 @@ import com.flybotix.hfr.util.log.Logger;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import us.ilite.common.config.SystemSettings;
-import us.ilite.lib.drivers.Clock;
+import us.ilite.common.config.Settings;
+import us.ilite.robot.hardware.Clock;
 
 /**
  * A class which uses the WPILIB Notifier mechanic to run our Modules on
@@ -55,7 +55,7 @@ public class LoopManager implements Runnable{
     }
 
     public synchronized void stop() {
-
+        
         if(mIsRunning) {
             mLog.info("Stopping us.ilite.common.lib.control loop");
             mWpiNotifier.stop();
@@ -76,26 +76,40 @@ public class LoopManager implements Runnable{
     @Override
     public void run() {
         if(mIsRunning) {
+//            loopTimer.reset();
+//            loopTimer.start();
             double start = Timer.getFPGATimestamp();
             synchronized (mTaskLock) {
 
                 try {
                     if (mIsRunning) {
+//                        inputTimer.reset();
+//                        inputTimer.start();
                         mLoopList.periodicInput(Timer.getFPGATimestamp());
+//                        inputTimer.stop();
+//                        updateTimer.reset();
+//                        updateTimer.start();
                         mLoopList.loop(Timer.getFPGATimestamp());
+//                        updateTimer.stop();
                     }
                 } catch (Throwable t) {
                     t.printStackTrace();
                 }
             }
+//            mClock.cycleEnded();
 
+//            Data.kSmartDashboard.getEntry("loop_input_dt").setDouble(inputTimer.get());
+//            Data.kSmartDashboard.getEntry("loop_update_dt").setDouble(updateTimer.get());
+
+//            loopTimer.stop();
             double dt = Timer.getFPGATimestamp() - start;
             numLoops++;
             SmartDashboard.putNumber("highfreq_loop_dt", dt);
-            if (dt > SystemSettings.kControlLoopPeriod) {
+            if (dt > Settings.kControlLoopPeriod) {
+//                mLog.error("Overrun: ", /*loopTimer.get()*/dt, " Input took: "/*, inputTimer.get()*/, " Update took: "/*,updateTimer.get()*/);
                 numOverruns++;
             }
         }
     }
-
+    
 }

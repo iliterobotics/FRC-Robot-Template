@@ -14,8 +14,8 @@ allprojects {
 	apply plugin: "idea"
 	apply plugin: "eclipse"
 	
-	sourceCompatibility = JavaVersion.VERSION_1_8
-	targetCompatibility = JavaVersion.VERSION_1_8
+	sourceCompatibility = 1.11//JavaVersion.VERSION_1_8
+	targetCompatibility = 1.11//JavaVersion.VERSION_1_8
 
 }
 
