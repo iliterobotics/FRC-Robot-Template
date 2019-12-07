@@ -1,6 +1,6 @@
 package us.ilite.robot.commands;
 
-import com.team254.lib.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.geometry.Rotation2d;
 import us.ilite.common.Data;
 import us.ilite.common.config.Settings;
 import us.ilite.robot.hardware.IMU;

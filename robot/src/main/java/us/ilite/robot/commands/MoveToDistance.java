@@ -1,6 +1,6 @@
 package us.ilite.robot.commands;
 
-import com.team254.lib.util.Util;
+import us.ilite.common.lib.util.Utils;
 import us.ilite.robot.modules.Drive;
 import us.ilite.robot.modules.DriveMessage;
 
@@ -31,7 +31,7 @@ public class MoveToDistance implements ICommand {
         boolean isFinished = false;
         //Take a measurment of how far the distance provider
         double deltaDistance = distanceProvider.getAbsoluteDistanceInInches() - goalDistanceInInches;
-        if(Util.epsilonEquals(deltaDistance, 0.0, mEpsilonInches)) {
+        if(Utils.isWithinTolerance(deltaDistance, 0.0, mEpsilonInches)) {
             isFinished = true;
         } else if(deltaDistance > 0.0d) {
             //Move backwards

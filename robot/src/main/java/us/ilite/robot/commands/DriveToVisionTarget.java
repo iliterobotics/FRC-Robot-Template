@@ -1,9 +1,9 @@
 package us.ilite.robot.commands;
 
-import com.team254.lib.util.Util;
 import us.ilite.common.Data;
 import us.ilite.common.config.Settings;
 import us.ilite.common.lib.control.PIDController;
+import us.ilite.common.lib.util.Utils;
 import us.ilite.common.types.ETargetingData;
 import us.ilite.robot.modules.Drive;
 import us.ilite.robot.modules.DriveMessage;
@@ -56,7 +56,7 @@ public class DriveToVisionTarget implements ICommand {
         }
 
         // Target "distance" is just area - min_area, clamped to a maximum and minimum value
-        double distanceFromTarget = Util.limit(mData.limelight.get(ETargetingData.ta) - kMinTargetArea, kMinTargetArea, kMaxTargetArea);
+        double distanceFromTarget = Utils.clamp(mData.limelight.get(ETargetingData.ta) - kMinTargetArea, kMinTargetArea, kMaxTargetArea);
         double angleToTarget = mData.limelight.get(ETargetingData.tx);
 
         // Only adjust target angle if we are far away

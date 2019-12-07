@@ -9,8 +9,7 @@ import com.flybotix.hfr.codex.Codex;
 import com.flybotix.hfr.codex.CodexOf;
 import com.flybotix.hfr.util.log.ILog;
 import com.flybotix.hfr.util.log.Logger;
-
-import com.team254.lib.util.Util;
+import us.ilite.common.lib.util.Utils;
 
 public class PIDController {
 
@@ -21,7 +20,7 @@ public class PIDController {
     private boolean mContinuous = false;
 
     private double mPreviousTime;
-    private PIDGains mPIDGains;
+    private ProfileGains mProfileGains;
     private double mDt;
     private double mMaximumOutput = 1.0;
     private double mMinimumOutput = -1.0;
@@ -45,14 +44,14 @@ public class PIDController {
 
 
     /**
-     * Constructs a PIDController object with a PIDGains object and defaultDT
-     * @param kPIDGains PIDGains object holding PIDF values
+     * Constructs a PIDController object with a ProfileGains object and defaultDT
+     * @param kProfileGains ProfileGains object holding PIDF values
      * @param pMinInput the minimum input for calculation
      * @param pMaxInput the maximum input for calculation
      * @param kDefaultDT the default delta time ( Settings.kControlLoopPeriod )
      */
-    public PIDController( PIDGains kPIDGains, double pMinInput, double pMaxInput, double kDefaultDT ) {
-        mPIDGains = kPIDGains;
+    public PIDController(ProfileGains kProfileGains, double pMinInput, double pMaxInput, double kDefaultDT ) {
+        mProfileGains = kProfileGains;
         mMinimumInput = pMinInput;
         mMaximumInput = pMaxInput;
         mDefaultDT = kDefaultDT;
@@ -88,7 +87,7 @@ public class PIDController {
         }
 
         // Only add to totalError if output isn't being saturated
-        if ( ( mError * mPIDGains.kP < mMaximumOutput ) && ( mError * mPIDGains.kP > mMinimumOutput ) ) {
+        if ( ( mError * mProfileGains.P < mMaximumOutput ) && ( mError * mProfileGains.P > mMinimumOutput ) ) {
             mTotalError += mError * mDt;
         } else {
             mTotalError = 0;
@@ -97,11 +96,11 @@ public class PIDController {
         // Don't blow away mError so as to not break derivative
         double proportionalError = Math.abs( mError ) < mDeadband ? 0 : mError;
 
-        mResult = ( mPIDGains.kP * proportionalError ) + ( mPIDGains.kI * mTotalError ) + ( mPIDGains.kD * ( mError - mPrevError ) / mDt )
-                + ( mPIDGains.kF * mSetpoint );
+        mResult = ( mProfileGains.P * proportionalError ) + ( mProfileGains.I * mTotalError ) + ( mProfileGains.D * ( mError - mPrevError ) / mDt )
+                + ( mProfileGains.F * mSetpoint );
         mPrevError = mError;
 
-        mResult = Util.limit( mResult, mMaximumOutput );
+        mResult = Utils.clamp( mResult, mMaximumOutput );
         mPreviousTime = absoluteTime;
 
         mOutputForCodex = mResult;
@@ -142,10 +141,10 @@ public class PIDController {
         mPIDControl.set( EPIDController.GOAL, mSetpoint );
         mPIDControl.set( EPIDController.ERROR, mError );
         mPIDControl.set( EPIDController.DELTA_TIME, mDTForCodex );
-        mPIDControl.set( EPIDController.P_GAIN, mPIDGains.kP );
-        mPIDControl.set( EPIDController.I_GAIN, mPIDGains.kI );
-        mPIDControl.set( EPIDController.D_GAIN, mPIDGains.kD );
-        mPIDControl.set( EPIDController.F_GAIN, mPIDGains.kF );
+        mPIDControl.set( EPIDController.P_GAIN, mProfileGains.P );
+        mPIDControl.set( EPIDController.I_GAIN, mProfileGains.I );
+        mPIDControl.set( EPIDController.D_GAIN, mProfileGains.D );
+        mPIDControl.set( EPIDController.F_GAIN, mProfileGains.F );
     }
 
     enum EPIDController implements CodexOf<Double> {
@@ -185,7 +184,7 @@ public class PIDController {
     }
 
     public void setSetpoint( double setpoint ) {
-        mSetpoint = Util.limit( setpoint, mMinimumInput, mMaximumInput );
+        mSetpoint = Utils.clamp( setpoint, mMinimumInput, mMaximumInput );
     }
 
     /**
@@ -196,8 +195,8 @@ public class PIDController {
         mContinuous = continuous;
     }
 
-    public void setPIDGains( PIDGains newPIDGains ) {
-        mPIDGains = newPIDGains;
+    public void setPIDGains( ProfileGains newProfileGains) {
+        mProfileGains = newProfileGains;
         logToCodex();
     }
 
@@ -216,8 +215,8 @@ public class PIDController {
         return mPIDControl;
     }
 
-    public PIDGains getPIDGains() {
-        return mPIDGains;
+    public ProfileGains getPIDGains() {
+        return mProfileGains;
     }
 
     public double getOutput() {

@@ -3,25 +3,16 @@ package us.ilite.robot.modules;
 import com.flybotix.hfr.codex.Codex;
 import com.flybotix.hfr.util.log.ILog;
 import com.flybotix.hfr.util.log.Logger;
-import com.team254.frc2018.planners.DriveMotionPlanner;
-import com.team254.lib.geometry.Pose2dWithCurvature;
-import com.team254.lib.geometry.Rotation2d;
-import com.team254.lib.trajectory.Trajectory;
-import com.team254.lib.trajectory.timing.TimedState;
+import edu.wpi.first.wpilibj.geometry.Rotation2d;
 import us.ilite.common.Data;
 import us.ilite.common.config.AbstractSystemSettingsUtils;
 import us.ilite.common.config.Settings;
-import us.ilite.common.lib.control.DriveController;
 import us.ilite.common.lib.control.PIDController;
 import us.ilite.common.types.ETargetingData;
 import us.ilite.common.types.drive.EDriveData;
 import us.ilite.common.types.sensor.EGyro;
 import us.ilite.common.types.sensor.EPowerDistPanel;
-import us.ilite.robot.hardware.Clock;
-import us.ilite.robot.hardware.ECommonControlMode;
-import us.ilite.robot.hardware.IDriveHardware;
-import us.ilite.robot.hardware.NeoDriveHardware;
-import us.ilite.robot.hardware.SimDriveHardware;
+import us.ilite.robot.hardware.*;
 import us.ilite.robot.loops.Loop;
 
 /**
@@ -43,30 +34,18 @@ public class Drive extends Loop {
 	private double mTargetTrackingThrottle = 0;
 
 	private PIDController mTargetAngleLockPid;
-	private DriveController mDriveController;
 
-	private Clock mSimClock = null;
 	private double mPreviousTime = 0;
 
-	public Drive(Data data, DriveController pDriveController, Clock pSimClock, boolean pSimulated)
+	public Drive(Data data)
 	{
 		this.mData = data;
-		this.mDriveController = pDriveController;
-		if(pSimulated) {
-			this.mSimClock = pSimClock;
-			this.mDriveHardware = new SimDriveHardware(mSimClock, mDriveController.getRobotProfile());
+		if(AbstractSystemSettingsUtils.isPracticeBot()) {
 		} else {
-			if(AbstractSystemSettingsUtils.isPracticeBot()) {
-			} else {
-				this.mDriveHardware = new NeoDriveHardware(Settings.Drive.kGearboxRatio);
-			}
+			this.mDriveHardware = new NeoDriveHardware(Settings.Drive.kGearboxRatio);
 		}
 
 		this.mDriveHardware.init();
-	}
-
-	public Drive(Data data, DriveController pDriveController) {
-		this(data, pDriveController, null, false);
 	}
 
 	@Override
@@ -75,11 +54,6 @@ public class Drive extends Loop {
 		mTargetAngleLockPid.setOutputRange(Settings.kTargetAngleLockMinPower, Settings.kTargetAngleLockMaxPower);
 		mTargetAngleLockPid.setSetpoint(0);
 		mTargetAngleLockPid.reset();
-
-		mDriveController.setPlannerMode(DriveMotionPlanner.PlannerMode.FEEDBACK);
-        // Other gains to try: (2.0, 0.7), (0.65, 0.175), (0.0, 0.0)
-		mDriveController.getController().setGains(2.0, 0.7);
-
 		mDriveHardware.zero();
 
 	  	setDriveMessage(DriveMessage.kNeutral);
@@ -100,14 +74,14 @@ public class Drive extends Loop {
 
 		mData.drive.set(EDriveData.LEFT_MESSAGE_OUTPUT, mDriveMessage.leftOutput);
 		mData.drive.set(EDriveData.RIGHT_MESSAGE_OUTPUT, mDriveMessage.rightOutput);
-		mData.drive.set(EDriveData.LEFT_MESSAGE_CONTROL_MODE, (double)mDriveMessage.leftControlMode.ordinal());
-		mData.drive.set(EDriveData.RIGHT_MESSAGE_CONTROL_MODE, (double)mDriveMessage.rightControlMode.ordinal());
+		mData.drive.set(EDriveData.LEFT_MESSAGE_CONTROL_MODE, (double)mDriveMessage.mControlMode.ordinal());
+		mData.drive.set(EDriveData.RIGHT_MESSAGE_CONTROL_MODE, (double)mDriveMessage.mControlMode.ordinal());
 		mData.drive.set(EDriveData.LEFT_MESSAGE_NEUTRAL_MODE, (double)mDriveMessage.leftNeutralMode.ordinal());
 		mData.drive.set(EDriveData.RIGHT_MESSAGE_NEUTRAL_MODE, (double)mDriveMessage.rightNeutralMode.ordinal());
 		mData.drive.set(EDriveData.LEFT_MESSAGE_DEMAND, mDriveMessage.leftDemand);
 		mData.drive.set(EDriveData.RIGHT_MESSAGE_DEMAND, mDriveMessage.rightDemand);
 //
-		mData.imu.set(EGyro.YAW_DEGREES, getHeading().getDegrees());
+		mData.imu.set(EGyro.YAW_DEGREES, mDriveHardware.getImu().getHeading().getDegrees());
 
 //		SimpleNetworkTable.writeCodexToSmartDashboard(EDriveData.class, mData.drive, mClock.getCurrentTime());
 	}
@@ -176,13 +150,6 @@ public class Drive extends Loop {
 		mDriveState = EDriveState.NORMAL;
 	}
 
-	public synchronized void setPath(Trajectory<TimedState<Pose2dWithCurvature>> pPath, boolean pResetPoseToStart) {
-		mDriveController.setTrajectory(pPath, pResetPoseToStart);
-		if(pResetPoseToStart) {
-			mDriveHardware.zero();
-		}
-	}
-
 	public synchronized void setTargetTrackingThrottle(double pTargetTrackingThrottle) {
 		mTargetTrackingThrottle = pTargetTrackingThrottle;
 	}
@@ -206,9 +173,6 @@ public class Drive extends Loop {
 		this.mDriveMessage = pDriveMessage;
 	}
 
-	public synchronized DriveController getDriveController() {
-		return mDriveController;
-	}
 
 	public synchronized IDriveHardware getDriveHardware() {
 	    return mDriveHardware;
@@ -218,20 +182,8 @@ public class Drive extends Loop {
 		return mDriveMessage;
 	}
 
-	public synchronized Rotation2d getHeading() {
-		return mDriveHardware.getHeading().rotateBy(mGyroOffset);
-	}
-
-	public synchronized void setHeading(Rotation2d pHeading) {
-		mGyroOffset = pHeading.rotateBy(mDriveHardware.getHeading().inverse());
-	}
-
 	public boolean isCurrentLimiting() {
 		return EPowerDistPanel.isAboveCurrentThreshold(Settings.Drive.kCurrentLimitAmps, mData.pdp, Settings.Drive.kPdpSlots);
-	}
-
-	public Clock getSimClock() {
-		return mSimClock;
 	}
 
 }

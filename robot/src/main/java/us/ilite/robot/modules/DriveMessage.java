@@ -1,10 +1,7 @@
 package us.ilite.robot.modules;
 
 import com.flybotix.hfr.codex.Codex;
-import com.team254.lib.util.DriveSignal;
-import com.team254.lib.util.Util;
 import us.ilite.common.config.Settings;
-import us.ilite.common.lib.util.CheesyDriveHelper;
 import us.ilite.common.types.ETargetingData;
 import us.ilite.robot.hardware.ECommonControlMode;
 import us.ilite.robot.hardware.ECommonNeutralMode;
@@ -13,28 +10,24 @@ import java.util.Objects;
 
 public class DriveMessage {
 
-  public static final DriveMessage kNeutral = new DriveMessage(0.0, 0.0,
+  public static final DriveMessage kBrake = new DriveMessage(0.0, 0.0,
           ECommonControlMode.PERCENT_OUTPUT)
           .setNeutralMode(ECommonNeutralMode.BRAKE);
 
-  private static CheesyDriveHelper mCheesyDriveHelper = new CheesyDriveHelper(Settings.kCheesyDriveGains);
+  public static final DriveMessage kNeutral = new DriveMessage(0.0, 0.0,
+          ECommonControlMode.PERCENT_OUTPUT)
+          .setNeutralMode(ECommonNeutralMode.COAST);
 
   public final double leftOutput, rightOutput;
-  public ECommonControlMode leftControlMode = ECommonControlMode.PERCENT_OUTPUT;
-  public ECommonControlMode rightControlMode = ECommonControlMode.PERCENT_OUTPUT;
+  public ECommonControlMode mControlMode = ECommonControlMode.PERCENT_OUTPUT;
 
   public double leftDemand = 0.0, rightDemand = 0.0;
   public ECommonNeutralMode leftNeutralMode = ECommonNeutralMode.BRAKE, rightNeutralMode = ECommonNeutralMode.BRAKE;
 
   public DriveMessage(double leftOutput, double rightOutput, ECommonControlMode pControlMode) {
-    this(leftOutput, rightOutput, pControlMode, pControlMode);
-  }
-
-  public DriveMessage(double leftOutput, double rightOutput, ECommonControlMode leftControlMode, ECommonControlMode rightControlMode) {
     this.leftOutput = leftOutput;
     this.rightOutput = rightOutput;
-    this.leftControlMode = leftControlMode;
-    this.rightControlMode = rightControlMode;
+    this.mControlMode = pControlMode;
   }
 
   /**
@@ -48,19 +41,6 @@ public class DriveMessage {
   }
 
 
-
-  /*
-  Uses CheesyDrive to generate steering and throttle commands.
-  This has the advantage of having derivative control (through "negative inertia")
-  Clamps the maximum curvature of the drivetrain (wheel sensitivity), allowing the PID to be overagressive and compensate better for large lateral offsets
-  Scales PID output by throttle, giving us better performance at low speeds
-   */
-  public static DriveMessage getCheesyDrive(double throttle, double turn) {
-    boolean isQuickTurn = Math.abs(throttle) < Util.kEpsilon;
-
-    DriveSignal cheesyOutput = mCheesyDriveHelper.cheesyDrive(throttle, turn, false);
-    return new DriveMessage(cheesyOutput.getLeft(), cheesyOutput.getRight(), ECommonControlMode.PERCENT_OUTPUT).setNeutralMode(ECommonNeutralMode.BRAKE);
-  }
 
   /*
   Implements the same clamping function as CheesyDrive.
@@ -110,12 +90,6 @@ public class DriveMessage {
     return this;
   }
 
-  public DriveMessage setNeutralMode(ECommonNeutralMode pLeftMode, ECommonNeutralMode pRightMode) {
-    this.leftNeutralMode = pLeftMode;
-    this.rightNeutralMode = pRightMode;
-    return this;
-  }
-
   public DriveMessage setNeutralMode(ECommonNeutralMode pMode) {
     this.leftNeutralMode = pMode;
     this.rightNeutralMode = pMode;
@@ -123,7 +97,7 @@ public class DriveMessage {
   }
 
   public DriveMessage setControlMode(ECommonControlMode pControlMode) {
-    this.leftControlMode = this.rightControlMode = pControlMode;
+    this.mControlMode = pControlMode;
     return this;
   }
 
@@ -136,15 +110,14 @@ public class DriveMessage {
             Double.compare(that.rightOutput, rightOutput) == 0 &&
             Double.compare(that.leftDemand, leftDemand) == 0 &&
             Double.compare(that.rightDemand, rightDemand) == 0 &&
-            leftControlMode == that.leftControlMode &&
-            rightControlMode == that.rightControlMode &&
+            mControlMode == that.mControlMode &&
             leftNeutralMode == that.leftNeutralMode &&
             rightNeutralMode == that.rightNeutralMode;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(leftOutput, rightOutput, leftControlMode, rightControlMode, leftDemand, rightDemand, leftNeutralMode, rightNeutralMode);
+    return Objects.hash(leftOutput, rightOutput, mControlMode, leftDemand, rightDemand, leftNeutralMode, rightNeutralMode);
   }
 
 }

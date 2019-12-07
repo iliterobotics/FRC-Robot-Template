@@ -1,7 +1,7 @@
 package us.ilite.robot.hardware;
 
 import com.flybotix.hfr.codex.Codex;
-import com.team254.lib.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.geometry.Rotation2d;
 
 import us.ilite.common.Data;
 import us.ilite.common.types.ETargetingData;
@@ -54,7 +54,8 @@ public class VisionGyro extends IMU {
         Double x = mTargetingData.get(ETargetingData.tx);
 
         if(x != null) {
-            return Rotation2d.fromDegrees(x).inverse();
+            // Invert?
+            return Rotation2d.fromDegrees(x);
         }
         
         return new Rotation2d();

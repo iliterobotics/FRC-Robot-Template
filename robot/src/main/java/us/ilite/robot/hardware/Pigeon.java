@@ -5,7 +5,7 @@ import java.util.Collections;
 
 import com.ctre.phoenix.sensors.PigeonIMU;
 import com.ctre.phoenix.sensors.PigeonIMU_StatusFrame;
-import com.team254.lib.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.geometry.Rotation2d;
 import us.ilite.common.config.Settings;
 
 public class Pigeon extends IMU{
@@ -62,9 +62,9 @@ public class Pigeon extends IMU{
 	}
 	
 	public Rotation2d getHeading() {
-	  return Rotation2d.fromDegrees(mPigeon.getFusedHeading()).inverse();
+	  return Rotation2d.fromDegrees(mPigeon.getFusedHeading());
 	}
-	
+
 	public double getYaw() {
     return ypr[0];
 	}

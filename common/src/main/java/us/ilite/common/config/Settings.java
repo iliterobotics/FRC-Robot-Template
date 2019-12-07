@@ -1,15 +1,12 @@
 package us.ilite.common.config;
 
-import java.util.Arrays;
-import java.util.List;
-
-import com.team254.lib.util.CheesyDriveGains;
-
-import us.ilite.common.lib.control.PIDGains;
+import us.ilite.common.lib.control.ProfileGains;
 import us.ilite.common.lib.util.NetworkTablesConstantsBase;
-import us.ilite.common.types.ETrackingType;
 import us.ilite.common.types.input.ELogitech310;
 import us.ilite.common.types.sensor.EPowerDistPanel;
+
+import java.util.Arrays;
+import java.util.List;
 
 public class Settings extends NetworkTablesConstantsBase {
 
@@ -47,7 +44,7 @@ public class Settings extends NetworkTablesConstantsBase {
         }
 
         public static class PCM {
-            public static int kFourBarDoubleSolenoidForward = 0; 
+            public static int kFourBarDoubleSolenoidForward = 0;
             public static int kFourBarDoubleSolenoidReverse = 1;
             public static int kFourBarPusher = 0;
         }
@@ -79,12 +76,8 @@ public class Settings extends NetworkTablesConstantsBase {
         // =============================================================================
         // Closed-Loop Velocity Constants
         // =============================================================================
-        public static int kVelocityTolerance = 0;
-        public static int kVelocityLoopSlot = 0;
-        public static int kCruiseVelocityRPM = 5676;
-        public static int kMaxAccelRPMperSec = kCruiseVelocityRPM*10;
-        public static PIDGains kVelocityPID = new PIDGains(1.0, 0.0, 0.0);
-        public static PIDGains kTurnToPIDGains = new PIDGains(0.0,0.0, 0.0,0.085);
+        public static ProfileGains kVelocityPID = new ProfileGains().p(1.0).maxVelocity(5676d).maxAccel(56760d);
+        public static ProfileGains kTurnToProfileGains = new ProfileGains().f(0.085);
         public static double kTurnSensitivity = 0.85;
 
         public static EPowerDistPanel[] kPdpSlots = new EPowerDistPanel[]{
@@ -117,8 +110,6 @@ public class Settings extends NetworkTablesConstantsBase {
     }
 
     public static class LimeLight {
-        public static int kDefaultPipeline = ETrackingType.TARGET.getPipeline();
-
         // =============================================================================
         // LimeLight Camera Constants
         // Note: These constants need to be recalculted for a specific robot geometry
@@ -144,13 +135,12 @@ public class Settings extends NetworkTablesConstantsBase {
         public static double kRightCCoeff = -0.0437470770400814;
     }
 
-    public static CheesyDriveGains kCheesyDriveGains = new CheesyDriveGains();
 
 
     // =============================================================================
     // Heading Gains
     // =============================================================================
-    public static PIDGains kDriveHeadingGains = new PIDGains(0.03, 0.0, 0.0);
+    public static ProfileGains kDriveHeadingGains = new ProfileGains().p(0.03);
     public static double kDriveLinearPercentOutputLimit = 0.5;
 
 
@@ -171,8 +161,8 @@ public class Settings extends NetworkTablesConstantsBase {
     // =============================================================================
     // PID TargetLock constants
     // =============================================================================
-    public static PIDGains kTargetAngleLockGains = new PIDGains(0.0005, 0.000, 0.0);
-    public static PIDGains kTargetDistanceLockGains = new PIDGains( 0.1, 0.0, 0.0);
+    public static ProfileGains kTargetAngleLockGains = new ProfileGains().p(0.0005);
+    public static ProfileGains kTargetDistanceLockGains = new ProfileGains().p(0.1);
 
     public static final double kTargetAngleLockMinPower = -1.0;
     public static final double kTargetAngleLockMaxPower = 1.0;

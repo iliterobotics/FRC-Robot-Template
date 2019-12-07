@@ -11,7 +11,7 @@ import us.ilite.common.lib.control.PIDController;
 
 import com.flybotix.hfr.util.log.ILog;
 import com.flybotix.hfr.util.log.Logger;
-import com.team254.lib.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.geometry.Rotation2d;
 
 
 public class TurnToDegree implements ICommand {
@@ -49,7 +49,7 @@ public class TurnToDegree implements ICommand {
     mTargetYaw = mInitialYaw.rotateBy( mTurnAngle );
 
     // PIDController configuration
-    pid = new PIDController( Settings.Drive.kTurnToPIDGains, -180, 180, Settings.kControlLoopPeriod );
+    pid = new PIDController( Settings.Drive.kTurnToProfileGains, -180, 180, Settings.kControlLoopPeriod );
     pid.setContinuous( true );
     pid.setOutputRange( kMIN_POWER, kMAX_POWER );
     pid.setSetpoint( mTargetYaw.getDegrees() );
@@ -59,7 +59,7 @@ public class TurnToDegree implements ICommand {
 
   public boolean update( double pNow ) {
     mOutput = pid.calculate( getYaw().getDegrees(), pNow );
-    mOutput += Math.signum( mOutput ) * Settings.Drive.kTurnToPIDGains.kF;
+    mOutput += Math.signum( mOutput ) * Settings.Drive.kTurnToProfileGains.F;
 
     // Keep track of time on target
     if ( ( Math.abs( pid.getError() ) <= Math.abs( mAllowableError ) ) ) {

@@ -3,11 +3,8 @@ package us.ilite.robot.hardware;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.flybotix.hfr.util.log.ILog;
 import com.flybotix.hfr.util.log.Logger;
-import com.team254.lib.geometry.Rotation2d;
 
 import us.ilite.common.lib.RobotProfile;
-import com.team254.frc2018.Kinematics;
-import us.ilite.common.lib.odometry.RobotStateEstimator;
 import us.ilite.common.lib.util.Conversions;
 import us.ilite.robot.modules.DriveMessage;
 
@@ -19,8 +16,6 @@ public class SimDriveHardware implements IDriveHardware {
 
     private final ILog mLogger = Logger.createLog(SimDriveHardware.class);
 
-    private RobotStateEstimator mEncoderStateEstimator;
-    
     private DriveMessage mDriveMessage;
     public SimTalonEncoder mLeftEncoder = new SimTalonEncoder();
     public SimTalonEncoder mRightEncoder = new SimTalonEncoder();
@@ -30,7 +25,6 @@ public class SimDriveHardware implements IDriveHardware {
 
     public SimDriveHardware(Clock pClock, RobotProfile pRobotProfile) {
         mClock = pClock;
-        mEncoderStateEstimator = new RobotStateEstimator(new Kinematics(pRobotProfile));
     }
 
     @Override
@@ -40,7 +34,6 @@ public class SimDriveHardware implements IDriveHardware {
 
     @Override
     public void zero() {
-        mEncoderStateEstimator.reset();
 
         mLeftEncoder.zero();
         mRightEncoder.zero();
@@ -68,7 +61,7 @@ public class SimDriveHardware implements IDriveHardware {
     public void update(double pNow) {
         double dt = pNow - mLastTime;
         mLogger.debug("Updating");
-        if(mDriveMessage.leftControlMode.kCtreControlMode == ControlMode.Velocity && mDriveMessage.rightControlMode.kCtreControlMode == ControlMode.Velocity) {
+        if(mDriveMessage.mControlMode.kCtreControlMode == ControlMode.Velocity && mDriveMessage.mControlMode.kCtreControlMode == ControlMode.Velocity) {
             mLeftEncoder.update(dt, mDriveMessage.leftOutput);
             mRightEncoder.update(dt, mDriveMessage.rightOutput);
             mLogger.debug(String.format(
@@ -84,19 +77,12 @@ public class SimDriveHardware implements IDriveHardware {
 
             ));
         } else {
-            mLogger.error("Control mode ", mDriveMessage.leftControlMode, " and ", mDriveMessage.rightControlMode, " is not supported in simulation.");
+            mLogger.error("Control mode ", mDriveMessage.mControlMode, " and ", mDriveMessage.mControlMode, " is not supported in simulation.");
         }
-
-        mEncoderStateEstimator.update(pNow, getLeftInches(), getRightInches());
-        System.out.println(mEncoderStateEstimator.getRobotState().getLatestFieldToVehiclePose().getRotation());
 
         mLastTime = pNow;
     }
     
-    public Rotation2d getHeading() {
-        return mEncoderStateEstimator.getRobotState().getLatestFieldToVehiclePose().getRotation();
-    }
-
     public double getLeftInches() {
         return Conversions.ticksToInches((int)mLeftEncoder.getPosition());
     }

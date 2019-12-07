@@ -1,25 +1,20 @@
 package us.ilite.robot;
 
-import java.util.List;
-
 import com.flybotix.hfr.codex.Codex;
 import com.flybotix.hfr.codex.CodexMetadata;
 import com.flybotix.hfr.codex.ICodexTimeProvider;
 import com.flybotix.hfr.util.log.ELevel;
 import com.flybotix.hfr.util.log.ILog;
 import com.flybotix.hfr.util.log.Logger;
-
-import edu.wpi.first.wpilibj.livewindow.LiveWindow;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.PowerDistributionPanel;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.livewindow.LiveWindow;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import us.ilite.common.Data;
 import us.ilite.common.config.AbstractSystemSettingsUtils;
 import us.ilite.common.config.Settings;
-import us.ilite.common.lib.control.DriveController;
-import us.ilite.common.lib.trajectory.TrajectoryGenerator;
 import us.ilite.common.lib.util.PerfTimer;
 import us.ilite.common.types.MatchMetadata;
 import us.ilite.common.types.sensor.EPowerDistPanel;
@@ -27,7 +22,12 @@ import us.ilite.robot.hardware.Clock;
 import us.ilite.robot.hardware.GetLocalIP;
 import us.ilite.robot.hardware.VisionGyro;
 import us.ilite.robot.loops.LoopManager;
-import us.ilite.robot.modules.*;
+import us.ilite.robot.modules.CommandManager;
+import us.ilite.robot.modules.Drive;
+import us.ilite.robot.modules.Limelight;
+import us.ilite.robot.modules.ModuleList;
+
+import java.util.List;
 
 public class Robot extends TimedRobot {
 
@@ -50,14 +50,12 @@ public class Robot extends TimedRobot {
     // Module declarations here
     private CommandManager mAutonomousCommandManager = new CommandManager().setManagerTag("Autonomous Manager");
     private CommandManager mTeleopCommandManager = new CommandManager().setManagerTag("Teleop Manager");
-    private DriveController mDriveController = new DriveController(null);
 
-    private Drive mDrive = new Drive(mData, mDriveController);
+    private Drive mDrive = new Drive(mData);
     private Limelight mLimelight = new Limelight(mData);
     private VisionGyro mVisionGyro = new VisionGyro(mData);
 
 
-    private TrajectoryGenerator mTrajectoryGenerator = new TrajectoryGenerator(mDriveController);
     private MatchMetadata mMatchMeta = null;
 
     private PerfTimer mClockUpdateTimer = new PerfTimer();

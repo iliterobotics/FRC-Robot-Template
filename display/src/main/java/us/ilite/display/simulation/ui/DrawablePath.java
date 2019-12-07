@@ -3,9 +3,8 @@ package us.ilite.display.simulation.ui;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.team254.lib.geometry.Pose2d;
-import com.team254.lib.geometry.Translation2d;
-
+import edu.wpi.first.wpilibj.geometry.Pose2d;
+import edu.wpi.first.wpilibj.geometry.Translation2d;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
@@ -22,12 +21,12 @@ public class DrawablePath extends ADrawable {
     public void draw(GraphicsContext gc, Pose2d pose, Translation2d aspectRatio) {
         mPointList.add(pose.getTranslation());
 
-        gc.moveTo(mPointList.get(0).x(), mPointList.get(0).y());
+        gc.moveTo(mPointList.get(0).getX(), mPointList.get(0).getY());
         gc.setStroke(kLineColor);
         gc.beginPath();
         for(Translation2d point : mPointList) {
-            Translation2d pointToDraw = new Translation2d(point.x() * aspectRatio.x(), point.y() * aspectRatio.y());
-            gc.lineTo(pointToDraw.x(), pointToDraw.y());
+            Translation2d pointToDraw = new Translation2d(point.getX() * aspectRatio.getX(), point.getY() * aspectRatio.getY());
+            gc.lineTo(pointToDraw.getX(), pointToDraw.getY());
         }
         gc.stroke();
         gc.closePath();

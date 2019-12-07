@@ -22,10 +22,6 @@ import javafx.scene.media.MediaPlayer;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import javafx.util.Callback;
-import us.ilite.common.Data;
-import us.ilite.common.types.auton.ECargoAction;
-import us.ilite.common.types.auton.EHatchAction;
-import us.ilite.common.types.auton.EStartingPosition;
 
 import java.io.File;
 import java.net.URL;
@@ -102,9 +98,6 @@ public class AutonConfigDisplay extends Application {
     
     HBox selectionBoxes = new HBox(
         //This is the dropdown for selecting autonomous type
-    		labeledDropdown(EStartingPosition.class),
-        labeledDropdown(EHatchAction.class),
-        labeledDropdown(ECargoAction.class),
     		delayLabel,
     		delayText);
     
@@ -147,18 +140,6 @@ public class AutonConfigDisplay extends Application {
 	        event -> {
 	          System.out.println("Action triggered!");
             String enumName = pEnumeration.getSimpleName();
-            if(enumName.equals(EStartingPosition.class.getSimpleName())){
-  	        	mStartingPosition = combo.getSelectionModel().getSelectedItem().ordinal();
-  	        	System.out.println("Updating position: " + mStartingPosition);
-  	        }
-  	        if(enumName.equals(ECargoAction.class.getSimpleName())) {
-  	        mCargoAction = combo.getSelectionModel().getSelectedItem().ordinal();
-              System.out.println("Updating cargo action: " + mCargoAction);
-  	        }
-  	        if(enumName.equals(EHatchAction.class.getSimpleName())){
-              mHatchAction = combo.getSelectionModel().getSelectedItem().ordinal();
-              System.out.println("Updating hatch action: " + mHatchAction);
-            }
 	        }
       );
 	    if(enums.size() > 0) combo.setValue(enums.get(0));
@@ -216,9 +197,9 @@ public class AutonConfigDisplay extends Application {
   }
   
   private void sendData() {
-      Data.kAutonTable.getEntry(ECargoAction.class.getSimpleName()).setDouble(mCargoAction);
-      Data.kAutonTable.getEntry(EHatchAction.class.getSimpleName()).setDouble(mHatchAction);
-      Data.kAutonTable.getEntry(EStartingPosition.class.getSimpleName()).setDouble(mStartingPosition);
+//      Data.kAutonTable.getEntry(ECargoAction.class.getSimpleName()).setDouble(mCargoAction);
+//      Data.kAutonTable.getEntry(EHatchAction.class.getSimpleName()).setDouble(mHatchAction);
+//      Data.kAutonTable.getEntry(EStartingPosition.class.getSimpleName()).setDouble(mStartingPosition);
 
   //   Settings.AUTON_TABLE.putDouble(Settings.AUTO_DELAY_KEY, mDelay);
   //   Settings.AUTON_TABLE.putNumber(ECross.class.getSimpleName(), mCross);
@@ -281,9 +262,9 @@ public class AutonConfigDisplay extends Application {
   }
   
   private void setDefaults() {
-    if(EStartingPosition.values().length > 0) mStartingPosition = EStartingPosition.values()[0].ordinal();
-    if(ECargoAction.values().length > 0) mCargoAction = ECargoAction.values()[0].ordinal();
-    if(EHatchAction.values().length > 0) mHatchAction = EHatchAction.values()[0].ordinal();
+//    if(EStartingPosition.values().length > 0) mStartingPosition = EStartingPosition.values()[0].ordinal();
+//    if(ECargoAction.values().length > 0) mCargoAction = ECargoAction.values()[0].ordinal();
+//    if(EHatchAction.values().length > 0) mHatchAction = EHatchAction.values()[0].ordinal();
   }
 
 }

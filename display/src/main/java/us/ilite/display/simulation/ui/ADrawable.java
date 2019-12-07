@@ -1,8 +1,8 @@
 package us.ilite.display.simulation.ui;
 
-import com.team254.lib.geometry.Pose2d;
-import com.team254.lib.geometry.Translation2d;
 
+import edu.wpi.first.wpilibj.geometry.Pose2d;
+import edu.wpi.first.wpilibj.geometry.Translation2d;
 import javafx.scene.canvas.GraphicsContext;
 
 public abstract class ADrawable {

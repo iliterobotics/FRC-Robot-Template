@@ -1,7 +1,5 @@
 package us.ilite.robot.hardware;
 
-import com.team254.lib.geometry.Rotation2d;
-
 import us.ilite.robot.modules.DriveMessage;
 
 public interface IDriveHardware extends IHardware {
@@ -11,7 +9,6 @@ public interface IDriveHardware extends IHardware {
 
     void setImu(IMU pImu);
     IMU getImu();
-    Rotation2d getHeading();
 
     double getLeftInches();
     double getRightInches();

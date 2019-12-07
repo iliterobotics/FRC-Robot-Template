@@ -4,9 +4,8 @@ import com.flybotix.hfr.util.log.ILog;
 import com.flybotix.hfr.util.log.Logger;
 import com.kauailabs.navx.frc.AHRS;
 
-import com.team254.lib.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.SerialPort.Port;
-import us.ilite.common.config.Settings;
 
 public class NavX extends IMU {
 

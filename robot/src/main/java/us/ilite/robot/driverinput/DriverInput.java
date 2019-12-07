@@ -3,13 +3,11 @@ package us.ilite.robot.driverinput;
 import com.flybotix.hfr.codex.Codex;
 import com.flybotix.hfr.util.log.ILog;
 import com.flybotix.hfr.util.log.Logger;
-import com.team254.lib.util.DriveSignal;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.Timer;
 import us.ilite.common.Data;
 import us.ilite.common.config.InputMap;
 import us.ilite.common.config.Settings;
-import us.ilite.common.lib.util.CheesyDriveHelper;
 import us.ilite.common.types.ETrackingType;
 import us.ilite.common.types.input.EInputScale;
 import us.ilite.common.types.input.ELogitech310;
@@ -35,8 +33,6 @@ public class DriverInput extends Module implements IThrottleProvider, ITurnProvi
     private boolean mIsCargo = false;
     private Joystick mDriverJoystick;
     private Joystick mOperatorJoystick;
-
-    private CheesyDriveHelper mCheesyDriveHelper = new CheesyDriveHelper(Settings.kCheesyDriveGains);
 
     protected Codex<Double, ELogitech310> mDriverInputCodex, mOperatorInputCodex;
 
@@ -100,13 +96,6 @@ public class DriverInput extends Module implements IThrottleProvider, ITurnProvi
         driveMessage.setNeutralMode(ECommonNeutralMode.BRAKE);
         driveMessage.setControlMode(ECommonControlMode.PERCENT_OUTPUT);
 
-        mDrive.setDriveMessage(driveMessage);
-    }
-
-    private void updateCheesyDrivetrain() {
-        boolean isQuickTurn = mData.driverinput.get(ELogitech310.RIGHT_TRIGGER_AXIS) > 0.5;
-        DriveSignal cheesySignal = mCheesyDriveHelper.cheesyDrive(getThrottle(), getTurn() * 0.5, isQuickTurn);
-        DriveMessage driveMessage = new DriveMessage(cheesySignal.getLeft(), cheesySignal.getRight(), ECommonControlMode.PERCENT_OUTPUT);
         mDrive.setDriveMessage(driveMessage);
     }
 

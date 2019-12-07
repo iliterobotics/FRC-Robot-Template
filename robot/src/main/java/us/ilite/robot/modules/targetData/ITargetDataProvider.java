@@ -11,8 +11,8 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import com.flybotix.hfr.codex.Codex;
-import com.team254.lib.geometry.Translation2d;
 
+import edu.wpi.first.wpilibj.geometry.Translation2d;
 import us.ilite.common.config.Settings;
 import us.ilite.common.config.Settings.VisionTarget;
 import us.ilite.common.types.ETargetingData;

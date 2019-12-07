@@ -6,7 +6,6 @@ import com.revrobotics.CANPIDController;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMaxLowLevel;
 import com.revrobotics.ControlType;
-import com.team254.lib.geometry.Rotation2d;
 import us.ilite.common.config.Settings;
 import us.ilite.common.lib.util.Conversions;
 import us.ilite.robot.modules.DriveMessage;
@@ -21,7 +20,6 @@ public class NeoDriveHardware implements IDriveHardware {
     private final CANSparkMax mLeftMaster, mRightMaster, mLeftMiddle, mRightMiddle/*, mLeftRear, mRightRear*/;
     private ControlType mLeftControlMode, mRightControlMode;
     private CANSparkMax.IdleMode mLeftNeutralMode, mRightNeutralMode;
-    private int mPidSlot = Settings.Drive.kVelocityLoopSlot;
 
     public NeoDriveHardware(double pGearRatio) {
         kGearRatio = pGearRatio;
@@ -93,14 +91,14 @@ public class NeoDriveHardware implements IDriveHardware {
 
     public void set(DriveMessage pDriveMessage) {
 
-        mLeftControlMode = configForControlMode(mLeftMaster, mLeftControlMode, pDriveMessage.leftControlMode.kRevControlType);
-        mRightControlMode = configForControlMode(mRightMaster, mRightControlMode, pDriveMessage.rightControlMode.kRevControlType);
+        mLeftControlMode = configForControlMode(mLeftMaster, mLeftControlMode, pDriveMessage.mControlMode.kRevControlType);
+        mRightControlMode = configForControlMode(mRightMaster, mRightControlMode, pDriveMessage.mControlMode.kRevControlType);
 
         mLeftNeutralMode = configForNeutralMode(mLeftNeutralMode, pDriveMessage.leftNeutralMode.kRevIdleMode, mLeftMaster, mLeftMiddle/*, mLeftRear*/);
         mRightNeutralMode = configForNeutralMode(mRightNeutralMode, pDriveMessage.rightNeutralMode.kRevIdleMode, mRightMaster, mRightMiddle/*, mRightRear*/);
 
-        mLeftMaster.getPIDController().setReference(pDriveMessage.leftOutput, mLeftControlMode, mPidSlot, pDriveMessage.leftDemand);
-        mRightMaster.getPIDController().setReference(pDriveMessage.rightOutput, mRightControlMode, mPidSlot, pDriveMessage.rightDemand);
+        mLeftMaster.getPIDController().setReference(pDriveMessage.leftOutput, mLeftControlMode, 1, pDriveMessage.leftDemand);
+        mRightMaster.getPIDController().setReference(pDriveMessage.rightOutput, mRightControlMode, 1, pDriveMessage.rightDemand);
 
     }
 
@@ -133,11 +131,9 @@ public class NeoDriveHardware implements IDriveHardware {
                     break;
                 case kSmartMotion:
                     controlMode = ControlType.kSmartMotion;
-                    configSparkForSmartMotion(pSparkMax);
                     break;
                 case kVelocity:
                     controlMode = ControlType.kVelocity;
-                    configSparkForVelocity(pSparkMax);
                     break;
                 default:
                     mLogger.error("Unimplemented control mode - defaulting to PercentOutput.");
@@ -191,32 +187,15 @@ public class NeoDriveHardware implements IDriveHardware {
         // talon.configNeutralDeadband(0.04, 0);
     }
 
-    private void configSparkForVelocity(CANSparkMax pSparkMax) {
-        mPidSlot = Settings.Drive.kVelocityLoopSlot;
-        mLogger.info("Configuring Spark ID ", pSparkMax.getDeviceId(), " for velocity mode");
-    }
-
     private void reloadVelocityGains(CANSparkMax pSparkMax) {
         mLogger.info("Reloading gains for Talon ID ", pSparkMax.getDeviceId());
 
         CANPIDController sparkMaxPid = pSparkMax.getPIDController();
-
-        sparkMaxPid.setSmartMotionAllowedClosedLoopError(Settings.Drive.kVelocityTolerance, Settings.Drive.kVelocityLoopSlot);
-        sparkMaxPid.setP(Settings.Drive.kVelocityPID.kP, Settings.Drive.kVelocityLoopSlot);
-        sparkMaxPid.setI(Settings.Drive.kVelocityPID.kI, Settings.Drive.kVelocityLoopSlot);
-        sparkMaxPid.setD(Settings.Drive.kVelocityPID.kD, Settings.Drive.kVelocityLoopSlot);
-        sparkMaxPid.setFF(Settings.Drive.kVelocityPID.kF, Settings.Drive.kVelocityLoopSlot);
+        HardwareUtils.setGains(sparkMaxPid, Settings.Drive.kVelocityPID);
     }
 
     private void configSparkForSmartMotion(CANSparkMax talon) {
-        configSparkForVelocity(talon);
-
-        talon.getPIDController().setSmartMotionMaxVelocity(Settings.Drive.kCruiseVelocityRPM, Settings.Hardware.CAN.kLongTimeoutMs);
-        talon.getPIDController().setSmartMotionMaxAccel(Settings.Drive.kMaxAccelRPMperSec, Settings.Hardware.CAN.kLongTimeoutMs);
-    }
-
-    public Rotation2d getHeading() {
-        return mGyro.getHeading();
+        reloadVelocityGains(talon);
     }
 
     public double getLeftInches() {

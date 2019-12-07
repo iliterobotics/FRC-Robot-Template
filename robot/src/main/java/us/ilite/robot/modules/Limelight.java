@@ -5,7 +5,7 @@ import java.util.Optional;
 import com.flybotix.hfr.codex.Codex;
 import com.flybotix.hfr.util.log.ILog;
 import com.flybotix.hfr.util.log.Logger;
-import com.team254.lib.geometry.Translation2d;
+import edu.wpi.first.wpilibj.geometry.Translation2d;
 
 
 import edu.wpi.first.networktables.NetworkTable;
@@ -63,8 +63,8 @@ public class Limelight extends Loop implements ITargetDataProvider {
                 mData.limelight.set(calcAngleToTarget, calcTargetApproachAngle());
                 Optional<Translation2d> p = calcTargetLocation(mVisionTarget);
                 if(p.isPresent()) {
-                    mData.limelight.set(ETargetingData.calcTargetX, p.get().x());
-                    mData.limelight.set(ETargetingData.calcTargetY, p.get().y());
+                    mData.limelight.set(ETargetingData.calcTargetX, p.get().getX());
+                    mData.limelight.set(ETargetingData.calcTargetY, p.get().getY());
                 }
             }
         }

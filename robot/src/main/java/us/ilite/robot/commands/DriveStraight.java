@@ -2,13 +2,13 @@ package us.ilite.robot.commands;
 
 import com.flybotix.hfr.util.log.ILog;
 import com.flybotix.hfr.util.log.Logger;
-import com.team254.lib.geometry.Rotation2d;
-import com.team254.lib.util.Util;
+import edu.wpi.first.wpilibj.geometry.Rotation2d;
 import us.ilite.common.Data;
 import us.ilite.common.config.Settings;
 import us.ilite.common.lib.control.PIDController;
-import us.ilite.common.lib.control.PIDGains;
+import us.ilite.common.lib.control.ProfileGains;
 import us.ilite.common.lib.util.Conversions;
+import us.ilite.common.lib.util.Utils;
 import us.ilite.common.types.drive.EDriveData;
 import us.ilite.common.types.sensor.EGyro;
 import us.ilite.robot.hardware.ECommonControlMode;
@@ -104,8 +104,8 @@ public class DriveStraight implements ICommand {
                 will never saturate our motor output.
                  */
                 // TODO Calculate this off of actual angular output?
-                linearOutput = Util.limit(linearOutput, 1.0 - (2.0 * Settings.kDriveHeadingGains.kP));
-                linearOutput = Util.limit(linearOutput, Settings.kDriveLinearPercentOutputLimit);
+                linearOutput = Utils.clamp(linearOutput, 1.0 - (2.0 * Settings.kDriveHeadingGains.P));
+                linearOutput = Utils.clamp(linearOutput, Settings.kDriveLinearPercentOutputLimit);
 
                 break;
             case MOTION_MAGIC:
@@ -119,7 +119,7 @@ public class DriveStraight implements ICommand {
                 break;
         }
 
-        if(Util.epsilonEquals(distanceError, 0.0, mAllowableDistanceError)) {
+        if(Utils.isWithinTolerance(distanceError, 0.0, mAllowableDistanceError)) {
 
             // Stop drivebase
             mDrive.setDriveMessage(DriveMessage.kNeutral);
@@ -177,7 +177,7 @@ public class DriveStraight implements ICommand {
         return this;
     }
 
-    public DriveStraight setHeadingGains(PIDGains pHeadingControlGains) {
+    public DriveStraight setHeadingGains(ProfileGains pHeadingControlGains) {
         mHeadingController.setPIDGains(pHeadingControlGains);
         return this;
     }

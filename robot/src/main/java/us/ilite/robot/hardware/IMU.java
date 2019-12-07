@@ -2,7 +2,7 @@ package us.ilite.robot.hardware;
 
 import java.util.List;
 
-import com.team254.lib.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.geometry.Rotation2d;
 
 import org.apache.commons.lang3.ArrayUtils;
 
