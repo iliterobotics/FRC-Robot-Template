@@ -70,19 +70,20 @@ public class TurnToDegree implements ICommand {
 
     // End if on target for 25 counts
     if ( mAlignedCount >= kMIN_ALIGNED_COUNT || pNow - mStartTime > kTIMEOUT ) {
-      mDrive.setDriveMessage( new DriveMessage( 0.0, 0.0, ECommonControlMode.PERCENT_OUTPUT ).setNeutralMode( ECommonNeutralMode.BRAKE ) );
+      mDrive.setDriveMessage( DriveMessage.kNeutral );
       mLogger.info( "Turn finished" );
       return true;
     }
 
     // Apply output, log, and return false for unfinished
-    mDrive.setDriveMessage( new DriveMessage( mOutput, -mOutput, ECommonControlMode.PERCENT_OUTPUT ).setNeutralMode( ECommonNeutralMode.BRAKE ) );
+    mDrive.setDriveMessage( new DriveMessage().turn(mOutput));
     Data.kSmartDashboard.putDouble( "turn_error", pid.getError() );
     mLogger.info( "Target: " + mTargetYaw + " Yaw: " + getYaw() + "\n" );
     return false;
   }
-  
+
   private Rotation2d getYaw() {
+    // TODO - was this inverted?
     return Rotation2d.fromDegrees( mData.imu.get( EGyro.YAW_DEGREES ) );
   }
   

@@ -1,103 +1,177 @@
 package us.ilite.robot.modules;
 
-import com.flybotix.hfr.codex.Codex;
 import us.ilite.common.config.Settings;
-import us.ilite.common.types.ETargetingData;
 import us.ilite.robot.hardware.ECommonControlMode;
 import us.ilite.robot.hardware.ECommonNeutralMode;
 
 import java.util.Objects;
+import static java.lang.Math.*;
 
 public class DriveMessage {
 
-  public static final DriveMessage kBrake = new DriveMessage(0.0, 0.0,
-          ECommonControlMode.PERCENT_OUTPUT)
-          .setNeutralMode(ECommonNeutralMode.BRAKE);
+  public static final DriveMessage kBrake = new DriveMessage()
+          .demand(0,0)
+          .neutral(ECommonNeutralMode.BRAKE);
 
-  public static final DriveMessage kNeutral = new DriveMessage(0.0, 0.0,
-          ECommonControlMode.PERCENT_OUTPUT)
-          .setNeutralMode(ECommonNeutralMode.COAST);
+  public static final DriveMessage kNeutral = new DriveMessage()
+          .demand(0,0)
+          .neutral(ECommonNeutralMode.COAST);
 
-  public final double leftOutput, rightOutput;
-  public ECommonControlMode mControlMode = ECommonControlMode.PERCENT_OUTPUT;
+  /**
+   * FALSE if this message is from Throttle + Turn
+   * TRUE if this message is from Left + Right
+   */
+  private boolean mIsDirect = false;
 
-  public double leftDemand = 0.0, rightDemand = 0.0;
-  public ECommonNeutralMode leftNeutralMode = ECommonNeutralMode.BRAKE, rightNeutralMode = ECommonNeutralMode.BRAKE;
+  private double mTurn = 0;
+  private double mThrottle = 0;
+  private double mLeftOutput = 0;
+  private double mRightOutput = 0;
+  private ECommonControlMode mControlMode = ECommonControlMode.PERCENT_OUTPUT;
+  private ECommonNeutralMode mNeutralMode = ECommonNeutralMode.BRAKE;
 
-  public DriveMessage(double leftOutput, double rightOutput, ECommonControlMode pControlMode) {
-    this.leftOutput = leftOutput;
-    this.rightOutput = rightOutput;
-    this.mControlMode = pControlMode;
+  public DriveMessage() {
+
   }
 
   /**
-   * Tell the drive train to go and turn.  Both are scalars from -1.0 to 1.0.
-   * @param pThrottle - positive = forward, negative = reverse
-   * @param pTurn - positive = right, negative = left
-   * @return an open loop drivetrain message
+   * Returns the expected left side power. If isDirect() returns TRUE, then the units will be dependent upon what method
+   * created the drive message. Additionally, the values may not match [ -1 < value < 1 ]
+   *
+   * If isDirect() returns FALSE and the values are outside [-1 < value < 1], then call normalize().
+   * @return expected left-side output
    */
-  public static DriveMessage fromThrottleAndTurn(double pThrottle, double pTurn) {
-    return new DriveMessage(pThrottle + pTurn, pThrottle - pTurn, ECommonControlMode.PERCENT_OUTPUT);
-  }
-
-
-
-  /*
-  Implements the same clamping function as CheesyDrive.
-  If throttle + turn saturates the output, the turn power being lost is applied to the other side of the drivetrain.
-  This should be better when tracking targets at high speeds.
-   */
-  public static DriveMessage getClampedTurnDrive(double throttle, double turn) {
-
-    double leftPwm = throttle + turn;
-    double rightPwm = throttle - turn;
-
-    if (leftPwm > 1.0) {
-      rightPwm -=  (leftPwm - 1.0);
-      leftPwm = 1.0;
-    } else if (rightPwm > 1.0) {
-      leftPwm -=  (rightPwm - 1.0);
-      rightPwm = 1.0;
-    } else if (leftPwm < -1.0) {
-      rightPwm +=  (-1.0 - leftPwm);
-      leftPwm = -1.0;
-    } else if (rightPwm < -1.0) {
-      leftPwm +=  (-1.0 - rightPwm);
-      rightPwm = -1.0;
+  public double getLeftOutput() {
+    if(mIsDirect) {
+      return mLeftOutput;
+    } else {
+      return mThrottle + mTurn;
     }
-
-    return new DriveMessage(leftPwm, rightPwm, ECommonControlMode.PERCENT_OUTPUT).setNeutralMode(ECommonNeutralMode.BRAKE);
   }
 
-  /*
-  Implements the same scaling function as CheesyDrive, where turn is scaled by throttle.
-  This *should* give us better performance at low speeds + the benefits of "clamped turn" drive.
+
+  /**
+   * Returns the expected right side power. If isDirect() returns TRUE, then the units will be dependent upon what method
+   * created the drive message. Additionally, the values may not match [ -1 < value < 1 ]
+   *
+   * If isDirect() returns FALSE and the values are outside [-1 < value < 1], then call normalize().
+   * @return expected right-side output
    */
-  public static DriveMessage getCurvatureDrive(double throttle, double turn) {
-    double adjustedTurn = Math.abs(throttle) * turn * Settings.Drive.kTurnSensitivity;
-
-    return DriveMessage.fromThrottleAndTurn(throttle, adjustedTurn).setNeutralMode(ECommonNeutralMode.BRAKE);
+  public double getRightOutput() {
+    if(mIsDirect) {
+      return mRightOutput;
+    } else {
+      return mThrottle - mTurn;
+    }
   }
 
-  private DriveMessage getArcadeDrive(double throttle, double turn, Codex<Double, ETargetingData> targetData) {
-//        mOutput *= targetData.get(ETargetingData.ta) * kTargetAreaScalar;
-    return DriveMessage.fromThrottleAndTurn(throttle, turn).setNeutralMode(ECommonNeutralMode.BRAKE);
+  public ECommonControlMode getMode() {
+    return mControlMode;
   }
 
-  public DriveMessage setDemand(double pLeftDemand, double pRightDemand) {
-    this.leftDemand = pLeftDemand;
-    this.rightDemand = pRightDemand;
+  public ECommonNeutralMode getNeutral() {
+    return mNeutralMode;
+  }
+
+  /**
+   Normalizes the drive inputs so the driver does not over-saturate the commands.  For example, if both turn + throttle
+   are at their max ranges, then the robot cannot respond with more than 100% power to one side.
+
+   This method will skip normalization if the DriveMessage was created directly from left/right demands.
+
+   @return this DriveMessage object to support the builder pattern.
+   */
+  public DriveMessage normalize() {
+    if(!mIsDirect) {
+      // Credit to 2363, Triple Helix
+      // https://github.com/TripleHelixProgramming/HelixUtilities
+
+      //read in joystick values from OI
+      //range [-1, 1]
+      //find the maximum possible value of (throttle + turn)
+      //along the vector that the arcade joystick is pointing
+      double saturatedInput;
+      double greaterInput = max(abs(mThrottle), abs(mTurn));
+      //range [0, 1]
+      double lesserInput = min(abs(mThrottle), abs(mTurn));
+      //range [0, 1]
+      if (greaterInput > 0.0) {
+        saturatedInput = (lesserInput / greaterInput) + 1.0;
+        //range [1, 2]
+      } else {
+        saturatedInput = 1.0;
+      }
+      //scale down the joystick input values
+      //such that (throttle + turn) always has a range [-1, 1]
+      mThrottle = mThrottle / saturatedInput;
+      mTurn = mTurn / saturatedInput;
+    }
     return this;
   }
 
-  public DriveMessage setNeutralMode(ECommonNeutralMode pMode) {
-    this.leftNeutralMode = pMode;
-    this.rightNeutralMode = pMode;
+  /**
+   Implements the same scaling function as CheesyDrive, where turn is scaled by throttle.
+   This *should* give us better performance at low speeds + the benefits of "clamped turn" drive.
+
+   This method will skip normalization if the DriveMessage was created directly from left/right demands.
+
+   @return this DriveMessage object to support the builder pattern.
+   */
+  public DriveMessage calculateCurvature() {
+    if(!mIsDirect) {
+      mTurn = Math.abs(mThrottle) * mTurn * Settings.Drive.kTurnSensitivity;
+    }
     return this;
   }
 
-  public DriveMessage setControlMode(ECommonControlMode pControlMode) {
-    this.mControlMode = pControlMode;
+  /**
+   *
+   * @param pTurn
+   * @return this DriveMessage object to support the builder pattern.
+   */
+  public DriveMessage turn(double pTurn) {
+    mTurn = pTurn;
+    mIsDirect = false;
+    return this;
+  }
+
+  /**
+   *
+   * @param pThrottle
+   * @return this DriveMessage object to support the builder pattern.
+   */
+  public DriveMessage throttle(double pThrottle) {
+    mThrottle = pThrottle;
+    mIsDirect = false;
+    return this;
+  }
+
+  /**
+   *
+   * @param pControlMode Overriding control mode
+   * @return this DriveMessage object to support the builder pattern.
+   */
+  public DriveMessage mode(ECommonControlMode pControlMode) {
+    mControlMode = pControlMode;
+    return this;
+  }
+
+  /**
+   * Override the left and right side demands. Nothing is assumed about units or values; i.e. these could be in
+   * meters/second or % outputs, depending on what the calling method needs.
+   * @param pLeftDemand Direct left-side demand
+   * @param pRightDemand Direct right-side demand
+   * @return this DriveMessage object to support the builder pattern.
+   */
+  public DriveMessage demand(double pLeftDemand, double pRightDemand) {
+    this.mLeftOutput = pLeftDemand;
+    this.mRightOutput = pRightDemand;
+    mIsDirect = true;
+    return this;
+  }
+
+  public DriveMessage neutral(ECommonNeutralMode pMode) {
+    this.mNeutralMode = pMode;
     return this;
   }
 
@@ -106,18 +180,18 @@ public class DriveMessage {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     DriveMessage that = (DriveMessage) o;
-    return Double.compare(that.leftOutput, leftOutput) == 0 &&
-            Double.compare(that.rightOutput, rightOutput) == 0 &&
-            Double.compare(that.leftDemand, leftDemand) == 0 &&
-            Double.compare(that.rightDemand, rightDemand) == 0 &&
+    return
+            this.mIsDirect == that.mIsDirect &&
+            Double.compare(that.mLeftOutput, mLeftOutput) == 0 &&
+            Double.compare(that.mRightOutput, mRightOutput) == 0 &&
             mControlMode == that.mControlMode &&
-            leftNeutralMode == that.leftNeutralMode &&
-            rightNeutralMode == that.rightNeutralMode;
+            mNeutralMode == that.mNeutralMode
+    ;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(leftOutput, rightOutput, mControlMode, leftDemand, rightDemand, leftNeutralMode, rightNeutralMode);
+    return Objects.hash(mIsDirect, mTurn, mThrottle, mLeftOutput, mRightOutput, mControlMode, mNeutralMode);
   }
 
 }

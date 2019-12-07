@@ -1,5 +1,6 @@
 package us.ilite.common.config;
 
+import edu.wpi.first.wpilibj.controller.ProfiledPIDController;
 import us.ilite.common.lib.control.ProfileGains;
 import us.ilite.common.lib.util.NetworkTablesConstantsBase;
 import us.ilite.common.types.input.ELogitech310;
@@ -76,6 +77,7 @@ public class Settings extends NetworkTablesConstantsBase {
         // =============================================================================
         // Closed-Loop Velocity Constants
         // =============================================================================
+        public static ProfileGains kDistancePID = new ProfileGains().p(1.0).maxVelocity(5676d).maxAccel(56760d);
         public static ProfileGains kVelocityPID = new ProfileGains().p(1.0).maxVelocity(5676d).maxAccel(56760d);
         public static ProfileGains kTurnToProfileGains = new ProfileGains().f(0.085);
         public static double kTurnSensitivity = 0.85;

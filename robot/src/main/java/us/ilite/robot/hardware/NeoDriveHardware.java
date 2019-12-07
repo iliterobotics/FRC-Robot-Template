@@ -91,14 +91,15 @@ public class NeoDriveHardware implements IDriveHardware {
 
     public void set(DriveMessage pDriveMessage) {
 
-        mLeftControlMode = configForControlMode(mLeftMaster, mLeftControlMode, pDriveMessage.mControlMode.kRevControlType);
-        mRightControlMode = configForControlMode(mRightMaster, mRightControlMode, pDriveMessage.mControlMode.kRevControlType);
+        mLeftControlMode = configForControlMode(mLeftMaster, mLeftControlMode, pDriveMessage.getMode().kRevControlType);
+        mRightControlMode = configForControlMode(mRightMaster, mRightControlMode, pDriveMessage.getMode().kRevControlType);
 
-        mLeftNeutralMode = configForNeutralMode(mLeftNeutralMode, pDriveMessage.leftNeutralMode.kRevIdleMode, mLeftMaster, mLeftMiddle/*, mLeftRear*/);
-        mRightNeutralMode = configForNeutralMode(mRightNeutralMode, pDriveMessage.rightNeutralMode.kRevIdleMode, mRightMaster, mRightMiddle/*, mRightRear*/);
+        mLeftNeutralMode = configForNeutralMode(mLeftNeutralMode, pDriveMessage.getNeutral().kRevIdleMode, mLeftMaster, mLeftMiddle/*, mLeftRear*/);
+        mRightNeutralMode = configForNeutralMode(mRightNeutralMode, pDriveMessage.getNeutral().kRevIdleMode, mRightMaster, mRightMiddle/*, mRightRear*/);
 
-        mLeftMaster.getPIDController().setReference(pDriveMessage.leftOutput, mLeftControlMode, 1, pDriveMessage.leftDemand);
-        mRightMaster.getPIDController().setReference(pDriveMessage.rightOutput, mRightControlMode, 1, pDriveMessage.rightDemand);
+        // TODO - update arbitrary FF with the ProfileGains FF
+        mLeftMaster.getPIDController().setReference(pDriveMessage.getLeftOutput(), mLeftControlMode, 1, 0);
+        mRightMaster.getPIDController().setReference(pDriveMessage.getRightOutput(), mRightControlMode, 1, 0);
 
     }
 

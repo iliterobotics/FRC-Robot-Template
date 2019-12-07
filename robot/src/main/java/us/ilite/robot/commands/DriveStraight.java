@@ -2,13 +2,19 @@ package us.ilite.robot.commands;
 
 import com.flybotix.hfr.util.log.ILog;
 import com.flybotix.hfr.util.log.Logger;
+import edu.wpi.first.wpilibj.controller.ProfiledPIDController;
 import edu.wpi.first.wpilibj.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.trajectory.TrapezoidProfile;
 import us.ilite.common.Data;
 import us.ilite.common.config.Settings;
 import us.ilite.common.lib.control.PIDController;
 import us.ilite.common.lib.control.ProfileGains;
 import us.ilite.common.lib.util.Conversions;
 import us.ilite.common.lib.util.Utils;
+
+import static us.ilite.common.types.drive.EDriveData.*;
+import static us.ilite.common.types.sensor.EGyro.YAW_DEGREES;
+
 import us.ilite.common.types.drive.EDriveData;
 import us.ilite.common.types.sensor.EGyro;
 import us.ilite.robot.hardware.ECommonControlMode;
@@ -39,20 +45,24 @@ public class DriveStraight implements ICommand {
     private double mAllowableDistanceError = 3.0;
     private double mRampDistance = 120.0;
     private double mLastTime = 0.0;
+    private double mStartTime = 0.0;
     private PIDController mHeadingController = new PIDController(Settings.kDriveHeadingGains, -180.0, 180.0, Settings.kControlLoopPeriod);
+
+    private ProfiledPIDController mDistanceController = Settings.Drive.kDistancePID.generateController();
 
     public DriveStraight(Drive pDrive, Data pData, EDriveControlMode pDriveControlMode, double pDistanceToDrive) {
         mDrive = pDrive;
         mData = pData;
         mDistanceToDrive = pDistanceToDrive;
         mDriveControlMode = pDriveControlMode;
+        mDistanceController.setGoal(mDistanceToDrive);
     }
 
     /**
      * Indicates whether we use velocity control or pure % output for drivebase outputs.
      */
     public enum EDriveControlMode {
-        MOTION_MAGIC(ECommonControlMode.MOTION_MAGIC),
+        MOTION_MAGIC(ECommonControlMode.MOTION_PROFILE),
         PERCENT_OUTPUT(ECommonControlMode.PERCENT_OUTPUT);
 
         public final ECommonControlMode kMotorControlMode;
@@ -66,10 +76,12 @@ public class DriveStraight implements ICommand {
     public void init(double pNow) {
         // Set target heading to current heading if setTargetHeading() wasn't called manually
         if(mTargetHeading == null) {
-            mTargetHeading = Rotation2d.fromDegrees(mData.imu.get(EGyro.YAW_DEGREES));
+            // TODO - was this inverted?
+            mTargetHeading = Rotation2d.fromDegrees(mData.imu.get(YAW_DEGREES));
         }
         mInitialDistance = getAverageDriveDistance();
         mLastTime = pNow;
+        mStartTime = pNow;
 
         mHeadingController.setContinuous(true);
         mHeadingController.setOutputRange(-1.0, 1.0);
@@ -79,47 +91,11 @@ public class DriveStraight implements ICommand {
     @Override
     public boolean update(double pNow) {
 
-        DriveMessage driveMessage;
-        double angularOutput = 0.0, linearOutput = 0.0;
-        double distanceError = mDistanceToDrive - getAverageDistanceTraveled();
+        double turn = mHeadingController.calculate(mData.imu.get(YAW_DEGREES), pNow - mLastTime);
+        // TODO - the units here are probably incorrect
+        double throttle = mDistanceController.calculate(getAverageDriveDistance());
 
-        angularOutput = mHeadingController.calculate(mData.imu.get(EGyro.YAW_DEGREES), pNow - mLastTime);
-
-        switch(mDriveControlMode) {
-            case PERCENT_OUTPUT:
-                /*
-                This is a proportional gain for distance. We scale the power we have available
-                by the ratio of distance_remaining to ramp_distance.
-                When distance_remaining > ramp_distance, available_power is scaled by a value > 1,
-                which means that the total output is > 1 and thus saturated. If distance_remaining
-                is < ramp_distance, the power we add in decreases linearly until distance_remaining
-                is 0.
-                 */
-                double availableRampPower = 1.0 - mDrivePercentOutput;
-                double distanceGain =  availableRampPower * 1.0 / mRampDistance;
-                linearOutput = mDrivePercentOutput + (distanceGain * distanceError);
-                /*
-                Limits linear output to the % output remaining after power needed to make turn is
-                calculated. This ensures that turn is always able to correct for error since linearOutput
-                will never saturate our motor output.
-                 */
-                // TODO Calculate this off of actual angular output?
-                linearOutput = Utils.clamp(linearOutput, 1.0 - (2.0 * Settings.kDriveHeadingGains.P));
-                linearOutput = Utils.clamp(linearOutput, Settings.kDriveLinearPercentOutputLimit);
-
-                break;
-            case MOTION_MAGIC:
-                // TODO Enforce a maximum velocity?
-                // Calculate a distance setpoint
-                linearOutput = Conversions.inchesToTicks(mInitialDistance + mDistanceToDrive);
-
-                break;
-            default:
-                mLog.warn("Hit unexpected drive control state: ", mDriveControlMode.name());
-                break;
-        }
-
-        if(Utils.isWithinTolerance(distanceError, 0.0, mAllowableDistanceError)) {
+        if(mDistanceController.atSetpoint()) {
 
             // Stop drivebase
             mDrive.setDriveMessage(DriveMessage.kNeutral);
@@ -127,17 +103,8 @@ public class DriveStraight implements ICommand {
             mLastTime = pNow;
             return true;
         } else {
-            /*
-            Apply heading correction as an arbitrary output (not dependent on control mode). This means
-            that we can use the same math for heading correction no matter which motor control mode we
-            are using.
-            */
-            driveMessage = new DriveMessage(linearOutput, linearOutput, mDriveControlMode.kMotorControlMode);
-            driveMessage.setDemand(angularOutput, -angularOutput);
-            driveMessage.setNeutralMode(ECommonNeutralMode.BRAKE);
-
+            DriveMessage driveMessage = new DriveMessage().throttle(throttle).turn(turn).normalize();
             mDrive.setDriveMessage(driveMessage);
-
             mLastTime = pNow;
 
 //            Data.kSmartDashboard.putDouble("Angle Error", mHeadingController.getError());

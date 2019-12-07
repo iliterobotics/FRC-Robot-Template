@@ -1,5 +1,9 @@
 package us.ilite.common.lib.control;
 
+import edu.wpi.first.wpilibj.controller.ProfiledPIDController;
+import edu.wpi.first.wpilibj.trajectory.TrapezoidProfile;
+import us.ilite.common.config.Settings;
+
 /**
  * A data structure meant to hold PIDF, Max Accel, Max Speed, etc.
  * No assumption are made about units.
@@ -17,6 +21,16 @@ public class ProfileGains {
 
     /** Defaulted to 1 */
     public int PROFILE_SLOT = 1;
+
+    public TrapezoidProfile.Constraints generateConstraints() {
+        return new TrapezoidProfile.Constraints(MAX_VELOCITY,MAX_ACCEL);
+    }
+
+    public ProfiledPIDController generateController() {
+        ProfiledPIDController controller = new ProfiledPIDController(P, I, D, generateConstraints(), Settings.kControlLoopPeriod);
+        controller.setTolerance(TOLERANCE);
+        return controller;
+    }
 
     /**
      * Builder-pattern helper for constructing

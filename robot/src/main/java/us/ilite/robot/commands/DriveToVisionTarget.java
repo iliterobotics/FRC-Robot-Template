@@ -77,7 +77,7 @@ public class DriveToVisionTarget implements ICommand {
         double turn = mHeadingController.calculate(angleToTarget, pNow);
         double throttle = mDistanceController.calculate(distanceFromTarget, pNow);
 
-        mDrive.setDriveMessage(DriveMessage.fromThrottleAndTurn(throttle, turn));
+        mDrive.setDriveMessage(new DriveMessage().throttle(throttle).turn(turn).normalize());
 
         return false;
     }

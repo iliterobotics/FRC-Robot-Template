@@ -61,13 +61,13 @@ public class SimDriveHardware implements IDriveHardware {
     public void update(double pNow) {
         double dt = pNow - mLastTime;
         mLogger.debug("Updating");
-        if(mDriveMessage.mControlMode.kCtreControlMode == ControlMode.Velocity && mDriveMessage.mControlMode.kCtreControlMode == ControlMode.Velocity) {
-            mLeftEncoder.update(dt, mDriveMessage.leftOutput);
-            mRightEncoder.update(dt, mDriveMessage.rightOutput);
+        if(mDriveMessage.getMode().kCtreControlMode == ControlMode.Velocity && mDriveMessage.getMode().kCtreControlMode == ControlMode.Velocity) {
+            mLeftEncoder.update(dt, mDriveMessage.getLeftOutput());
+            mRightEncoder.update(dt, mDriveMessage.getRightOutput());
             mLogger.debug(String.format(
                 "\nCommanded Vel: (%s, %s)\nVel: (%s, %s)\nPos Ticks: (%s, %s)\nPos Inches: (%s, %s)\n", 
-                mDriveMessage.leftOutput,
-                mDriveMessage.rightOutput,
+                mDriveMessage.getLeftOutput(),
+                mDriveMessage.getRightOutput(),
                 mLeftEncoder.getVelocity(),
                 mRightEncoder.getVelocity(),
                 mLeftEncoder.getPosition(),
@@ -77,7 +77,7 @@ public class SimDriveHardware implements IDriveHardware {
 
             ));
         } else {
-            mLogger.error("Control mode ", mDriveMessage.mControlMode, " and ", mDriveMessage.mControlMode, " is not supported in simulation.");
+            mLogger.error("Control mode ", mDriveMessage.getMode(), " and ", mDriveMessage.getMode(), " is not supported in simulation.");
         }
 
         mLastTime = pNow;

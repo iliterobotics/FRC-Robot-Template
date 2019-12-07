@@ -12,7 +12,7 @@ public enum ECommonControlMode {
     PERCENT_OUTPUT(ControlMode.PercentOutput, ControlType.kDutyCycle),
     CURRENT(ControlMode.Current, ControlType.kCurrent),
     POSITION(ControlMode.Position, ControlType.kPosition),
-    MOTION_MAGIC(ControlMode.MotionMagic, ControlType.kSmartMotion),
+    MOTION_PROFILE(ControlMode.MotionMagic, ControlType.kSmartMotion),
     DEFERRED(ControlMode.PercentOutput, ControlType.kDutyCycle);
 
     public final ControlMode kCtreControlMode;
